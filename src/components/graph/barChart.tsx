@@ -1,6 +1,9 @@
+"use client";
 import { ProductChart } from "@/types/productTypes";
 import React, { useEffect, useState } from "react";
-import Plot from "react-plotly.js";
+import dynamic from "next/dynamic";
+const Plot = dynamic(() => import("react-plotly.js"), { ssr: false, })
+import NoSSR from "../noSSR";
 
 const BarChart= (props:any) => {
 
@@ -17,6 +20,7 @@ const BarChart= (props:any) => {
   
 
   return (
+    <NoSSR>
     <Plot
       data={[
         {
@@ -41,6 +45,7 @@ const BarChart= (props:any) => {
       style={{borderRadius:10}}
       config={{ displayModeBar: false,responsive:true}}
     />
+    </NoSSR>
   );
 };
 

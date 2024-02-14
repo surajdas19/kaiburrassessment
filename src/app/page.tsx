@@ -9,22 +9,25 @@ import Image from "next/image";
 import Spinner from "@/components/spinner";
 import useDebounce from "@/components/debounce";
 import Footer from "@/components/footer";
-const BarChart = dynamic(() => import("../components/graph/barChart"), {
-  loading: () =>  <Spinner />,
-});
+const BarChart = dynamic(() => import("../components/graph/barChart"));
 
 export default function Home() {
   const [productList, setProductList] = useState<Products>({});
   const [skip, setSkip] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>();
   const [chartData,setChartData]=useState<ProductChart>({product:[],stock:[]})
   const [search, setSearch] = useState<string>('');
   const debouncedSearch = useDebounce(search, 300);
 
   const getProductData = async (skip: number,search:string='') => {
+    if(search==''&&skip==0){
+      setIsLoading(true)
+    }
     fetch(`https://dummyjson.com/products/search?limit=10&skip=${skip}&q=${search}`)
       .then((res) => res.json())
       .then((data) => {
         handleResponseData(data)
+        setIsLoading(false)
       });
   };
 
@@ -102,6 +105,14 @@ export default function Home() {
     setSkip(pageSkip);
   };
 
+  if (isLoading) {
+    return (
+      <>
+      <Header />
+      <Spinner />
+      </>
+    )
+  }
   return (
     <>
       <NextUIProvider>
