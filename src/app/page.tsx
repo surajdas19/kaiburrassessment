@@ -1,113 +1,245 @@
+"use client";
+import { NextUIProvider, Pagination, pagination } from "@nextui-org/react";
+import Header from "../components/header";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import { ProductChart, Products } from "../types/productTypes";
+import { FaStar } from "react-icons/fa6";
 import Image from "next/image";
+import Spinner from "@/components/spinner";
+import useDebounce from "@/components/debounce";
+import Footer from "@/components/footer";
+const BarChart = dynamic(() => import("../components/graph/barChart"), {
+  loading: () =>  <Spinner />,
+});
 
 export default function Home() {
+  const [productList, setProductList] = useState<Products>({});
+  const [skip, setSkip] = useState<number>(0);
+  const [chartData,setChartData]=useState<ProductChart>({product:[],stock:[]})
+  const [search, setSearch] = useState<string>('');
+  const debouncedSearch = useDebounce(search, 300);
+
+  const getProductData = async (skip: number,search:string='') => {
+    fetch(`https://dummyjson.com/products/search?limit=10&skip=${skip}&q=${search}`)
+      .then((res) => res.json())
+      .then((data) => {
+        handleResponseData(data)
+      });
+  };
+
+
+
+  const handleResponseData=(data:Products)=>{
+    if(chartData?.product?.length!==0){
+      data?.products?.forEach((val:any) => {
+        chartData?.product?.forEach(($:any,i:number)=>{
+          if(val?.title==$){
+            val.isChecked=true
+          }
+        })
+      })
+    }else{
+      data?.products?.forEach((val:any,i:number) => {
+        if(skip==0&&i<5){
+          val.isChecked=true
+          handleCheckbox(val?.title,val?.stock,true)
+        }else{
+          val.isChecked=false
+        }
+      })
+    }
+    setProductList(data);
+
+  }
+
+  const handleCheckbox=(title:string,stocks:number,type:boolean)=>{
+    let product:any=chartData.product,stock:any=chartData.stock
+    let a=product.indexOf(title)
+    let b=stock.indexOf(stocks)
+    if(type){
+      if(a==-1&&b==-1){
+        product?.push(title)
+        stock?.push(stocks)
+        setChartData({product,stock})
+      }
+    }else{
+      if (a > -1) { 
+        product.splice(a, 1); 
+      }
+      if (b > -1) { 
+        stock.splice(b, 1); 
+      }
+      setChartData({product,stock})
+    }
+  }
+
+  const onChangeCheckBox = (e: {
+    target: { checked: boolean; value: React.SetStateAction<string> };}) => {
+      const { value, checked: isChecked } = e.target;
+      let data1=productList.products
+      data1?.forEach((val:any,i:number) => {
+        if(val?.id==value){
+          val.isChecked=isChecked
+          handleCheckbox(val?.title,val?.stock,isChecked)
+        }
+      })
+      setProductList({...productList,products:data1})
+
+  };
+
+  useEffect(() => {
+    getProductData(skip,'');
+  }, [skip]);
+
+  useEffect(() => {
+      getProductData(skip,debouncedSearch);
+  }, [debouncedSearch]);
+
+
+  const pagination = (page: number, limit: number) => {
+    let pageSkip = page == 1 ? 0 : page * limit - limit;
+    setSkip(pageSkip);
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <>
+      <NextUIProvider>
+        <Header />
+
+        <div className="w-full bg-[#DFCCFB] flex justify-center">
+          <div className="flex  flex-col bg-[#DFCCFB] w-11/12 2xl:w-3/4 p-4 pb-2">
+            <BarChart chartData={chartData} />
+          </div>
         </div>
-      </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+        <main className="flex min-h-screen flex-col bg-[#DFCCFB] items-center justify-between p-4 pt-2">
+          <div className="flex w-full justify-center h-full m-4">
+            <div className="w-11/12 2xl:w-3/4 mx-auto bg-white shadow-lg rounded-2xl border border-gray-200">
+              <header className="px-5 flex justify-between py-4 border-b  border-gray-100">
+                <h2 className="font-semibold text-gray-800">Customers</h2>
+                <input className="bg-gray-100 px-3 py-2 rounded-2xl w-1/3" onChange={(a)=>{setSearch(a?.target?.value)}} type="text" placeholder="Search product..." />
+              </header>
+              <div className="p-3">
+                <div className="overflow-x-auto">
+                  <table className="table-auto w-full">
+                    <thead className="text-xs font-semibold uppercase text-gray-400 bg-gray-50">
+                      <tr>
+                        <th className="p-2 whitespace-nowrap">
+                          <div className="font-semibold text-left"></div>
+                        </th>
+                        <th className="p-2 whitespace-nowrap">
+                          <div className="font-semibold text-left">
+                            Product Name
+                          </div>
+                        </th>
+                        <th className="p-2 whitespace-nowrap">
+                          <div className="font-semibold text-left">
+                            Category
+                          </div>
+                        </th>
+                        <th className="p-2 whitespace-nowrap">
+                          <div className="font-semibold text-left">Price</div>
+                        </th>
+                        <th className="p-2 whitespace-nowrap">
+                          <div className="font-semibold text-center">Stock</div>
+                        </th>
+                        <th className="p-2 whitespace-nowrap">
+                          <div className="font-semibold text-center">
+                            Rating
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                     {productList?.products?.length ?
+                    <tbody className="text-sm divide-y divide-gray-100">
+                      {productList?.products?.map((data) => {
+                        return (
+                          <tr key={data?.id}>
+                            <td>
+                              <label
+                                htmlFor={data.title}
+                                className="checkLabel"
+                              >
+                                <input
+                                  type="checkbox"
+                                  value={data.id}
+                                  name="time"
+                                  onChange={onChangeCheckBox}
+                                  id={data.title}
+                                  checked={data.isChecked}
+                                />
+                                <span className="checkSpan"></span>
+                              </label>
+                            </td>
+                            <td className="p-2 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-10 h-10 flex-shrink-0 mr-2 sm:mr-3">
+                                  <Image
+                                    src={data?.thumbnail??''}
+                                    alt={data?.title??''}
+                                    height={40}
+                                    width={40}
+                                    className="w-auto h-auto"
+                                    priority
+                                  />
+                                </div>
+                                <div className="font-medium text-gray-800 capitalize">
+                                  {data?.title}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-2 whitespace-nowrap capitalize">
+                              <div className="text-left">{data?.category}</div>
+                            </td>
+                            <td className="p-2 whitespace-nowrap">
+                              <div className="text-left font-medium text-green-500">
+                                ${data?.price}
+                              </div>
+                            </td>
+                            <td className="p-2 whitespace-nowrap">
+                              <div className="text-base text-center">
+                                {data?.stock}
+                              </div>
+                            </td>
+                            <td className="p-2 whitespace-nowrap">
+                              <div className="text-base text-center flex justify-center">
+                                <FaStar color="#f0cf13" className="mt-1" />
+                                {data?.rating}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>:
+                    <tbody>
+                    <tr>
+                        <td colSpan={6} className="text-center p-10 text-xl" >
+                            No data available
+                        </td>
+                    </tr>
+                </tbody>}
+                  </table>
+                </div>
+              </div>
+              {productList?.total!==0&&<div className="w-full float-right">
+                {productList?.total && (
+                  <Pagination
+                    onChange={(page) => {
+                      pagination(page, productList?.limit??10);
+                    }}
+                    total={productList?.total / productList?.limit!}
+                    initialPage={1}
+                    className="float-right p-8"
+                  />
+                )}
+              </div>}
+            </div>
+          </div>
+          {/* </section> */}
+        </main>
+        <Footer/>
+      </NextUIProvider>
+    </>
   );
 }
